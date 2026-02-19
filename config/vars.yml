@@ -1,0 +1,43 @@
+#scalar_vars: ["nMuon", "nmuonSV", "nSV", "nfourmuonSV"]
+scalar_vars: ["nMuon", "nmuonSV", "nfourmuonSV"]
+scalar_vars_aux: ["dimuon_trigger", "bdt_scenarioA"]
+
+jagged_vars:
+  Muon: ["pt", "eta", "phi", "charge", "dxyErr", "dxybs"] 
+  muonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z", "mu1pt", "mu1eta", "mu1phi", "mu2pt", "mu2eta", "mu2phi"]
+  #SV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "pt", "eta", "phi", "x", "y", "z", "ntracks"]
+  fourmuonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z"]
+
+jagged_vars_aux:
+  muonSV: ["charge", "mass"]
+  SV: ["charge"]
+  fourmuonSV: ["charge"]
+
+jagged_multiplicity:
+  Muon: 4
+  muonSV: 4
+  #SV: 4
+  fourmuonSV: 4
+
+weight_var: "xs_weight"
+
+sort_vars:
+  muonSV:
+    var: "chi2"
+    ascending: True
+  #SV:
+  #  var: "chi2"
+  #  ascending: True
+  fourmuonSV:
+    var: "chi2"
+    ascending: True
+
+filter_vars:
+  scalar_filter: 
+  #jagged_filter: ["SV.charge == 0", "muonSV.charge == 0", "fourmuonSV.charge == 0"]
+  jagged_filter: ["muonSV.charge == 0", "fourmuonSV.charge == 0"]
+
+plot_vars: 
+  scalar_vars: ["bdt_scenarioA"]
+  jagged_vars:
+    muonSV: ["mass"]
