@@ -29,7 +29,7 @@ from utils.preprocess import Preprocessor
 # Directories
 input_dir = "data"
 cache_dir = "cache"
-vars_yaml_file = "config/vars.yml"
+vars_yaml_file = "config/vars_parking.yml"
 
 file_list_signal = glob.glob(f"{input_dir}/*ctau_10.root")
 file_list_bkg = glob.glob(f"{input_dir}/DileptonMinBias*.root")
@@ -42,7 +42,7 @@ print(file_list_bkg)
 
 # Preprocess signal files
 preprocessor_signal = Preprocessor(file_list_signal, vars_yaml_file, tree_name="Events", label=1, cache_dir=f"{cache_dir}/cache_signal", use_existing_cache=False, batch_size=100000)
-preprocessor_bkg = Preprocessor(file_list_bkg, vars_yaml_file, tree_name="Events", label=0, cache_dir=f"{cache_dir}/cache_background", use_existing_cache=True, batch_size=100000)
+preprocessor_bkg = Preprocessor(file_list_bkg, vars_yaml_file, tree_name="Events", label=0, cache_dir=f"{cache_dir}/cache_background", use_existing_cache=False, batch_size=100000)
 
 # Cache the files
 preprocessor_signal.cache_files()

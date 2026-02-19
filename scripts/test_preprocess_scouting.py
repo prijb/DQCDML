@@ -30,7 +30,7 @@ from utils.preprocess import Preprocessor
 input_dir = "data/Scouting"
 cache_dir = "cache_scouting"
 vars_yaml_file = "config/vars_scouting.yml"
-use_existing_cache = True
+use_existing_cache = False
 
 # Sample
 sample = "Signal_ScenarioA_Mpi-4_MA-1p33"

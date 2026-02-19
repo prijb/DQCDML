@@ -1,0 +1,58 @@
+# Features read from the ntuples
+scalar_vars: ["nMuon", "nmuonSV", "nfourmuonSV", "dimuon_trigger", "bdt_scenarioA"]
+jagged_vars:
+  Muon: ["pt", "eta", "phi", "charge", "dxyErr", "dxybs"] 
+  muonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z", "mu1pt", "mu1eta", "mu1phi", "mu2pt", "mu2eta", "mu2phi", "charge", "mass"]
+  SV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "pt", "eta", "phi", "x", "y", "z", "ntracks", "charge"]
+  fourmuonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z", "charge"]
+
+# Auxilliary variables added during processing 
+scalar_vars_aux: []
+jagged_vars_aux:
+  muonSV: []
+  SV: []
+  fourmuonSV: []
+
+# Variables used for training
+scalar_vars_train: ["nMuon", "nmuonSV", "nfourmuonSV"]
+jagged_vars_train:
+  Muon: ["pt", "eta", "phi", "charge", "dxyErr", "dxybs"] 
+  muonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z", "mu1pt", "mu1eta", "mu1phi", "mu2pt", "mu2eta", "mu2phi"]
+  #SV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "pt", "eta", "phi", "x", "y", "z", "ntracks"]
+  fourmuonSV: ["chi2", "dlen", "dlenSig", "dxy", "dxySig", "pAngle", "x", "y", "z"]
+
+# Multiplicity of jagged collections 
+jagged_multiplicity:
+  Muon: 4
+  muonSV: 4
+  SV: 4
+  fourmuonSV: 4
+
+# Variable to weight samples with (if it exists)
+weight_var: "xs_weight"
+
+# Sort jagged collections
+sort_vars:
+  muonSV:
+    var: "chi2"
+    ascending: True
+  SV:
+    var: "chi2"
+    ascending: True
+  fourmuonSV:
+    var: "chi2"
+    ascending: True
+
+# Helper functions which are stored in the helper_funcs directory. Use for more complicated operations
+helper_funcs: 
+  helper_funcs.parking: []
+
+# Simple one-line filters on objects that don't really need helper functions
+filter_vars:
+  scalar_filter: ["nMuon > 0", "dimuon_trigger == 1"]
+  jagged_filter: ["SV.charge == 0", "muonSV.charge == 0", "fourmuonSV.charge == 0"]
+
+plot_vars: 
+  scalar_vars: ["bdt_scenarioA"]
+  jagged_vars:
+    muonSV: ["mass"]
