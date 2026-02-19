@@ -1,5 +1,6 @@
 # This module preprocesses files and caches them
 #Processing
+import importlib
 import yaml
 import uproot   
 import awkward as ak
@@ -28,12 +29,15 @@ class Preprocessor():
         # Attributes filled
         self.vars_yaml_content = None
         self.scalar_vars = None
+        self.scalar_vars_aux = None
         self.jagged_vars = None
+        self.jagged_vars_aux = None
         self.weight_var = None
         self.read_vars = None
         self.train_vars = None
         self.multiplicities = None
         self.feature_vars = None
+        self.feature_vars_train = None
         self.plot_vars = None
 
         # Save cutflow efficiencies
@@ -51,58 +55,81 @@ class Preprocessor():
 
         self.vars_yaml_content = vars_yaml_content
         self.scalar_vars = scalar_vars
+        self.scalar_vars_aux = scalar_vars_aux
         self.jagged_vars = jagged_vars
+        self.jagged_vars_aux = jagged_vars_aux
+
+        # Define branches to read
+        scalar_vars_train = vars_yaml_content["scalar_vars_train"]
+        jagged_vars_train = vars_yaml_content["jagged_vars_train"]
 
         # Get the list of variables to read and train on
+        # Auxillary variables aren't read but generated later
         read_vars = []
         train_vars = []
         for var in scalar_vars:
             read_vars.append(var)
+        for var in scalar_vars_train:
             train_vars.append(var)
-
-        for var in scalar_vars_aux:
-            read_vars.append(var)
         
         for obj in jagged_vars.keys():
             for var in jagged_vars[obj]:
                 read_vars.append(f"{obj}_{var}")
+        for obj in jagged_vars_train.keys():
+            for var in jagged_vars_train[obj]:
                 train_vars.append(f"{obj}_{var}")
-
-        for obj in jagged_vars_aux.keys():
-            for var in jagged_vars_aux[obj]:
-                read_vars.append(f"{obj}_{var}")
 
         if self.weight_var is not None:
             read_vars.append(self.weight_var)
 
         # Get the list of long-vector variables
         var_list = []
-        var_list_plot = []
         var_list += scalar_vars
-        n_vars = len(scalar_vars)
+        var_list += scalar_vars_aux
+        n_vars = len(scalar_vars) + len(scalar_vars_aux)
+
         for obj in jagged_vars.keys():
             for var in jagged_vars[obj]:
                 n_vars += multiplicities[obj]
                 for i in range(multiplicities[obj]):
                     var_list.append(f"{obj}_{var}_{i}")
 
+        for obj in jagged_vars_aux.keys():
+            for var in jagged_vars_aux[obj]:
+                n_vars += multiplicities[obj]
+                for i in range(multiplicities[obj]):
+                    var_list.append(f"{obj}_{var}_{i}")
+
+        # Get list of long vector variables for training
+        var_list_train = []
+        var_list_train += scalar_vars_train
+        n_vars_train = len(scalar_vars_train)
+
+        for obj in jagged_vars_train.keys():
+            for var in jagged_vars_train[obj]:
+                n_vars_train += multiplicities[obj]
+                for i in range(multiplicities[obj]):
+                    var_list_train.append(f"{obj}_{var}_{i}")
+
         # Add plot variables
+        var_list_plot = []
         plot_vars = vars_yaml_content["plot_vars"]
+
         for var in plot_vars["scalar_vars"]:
             var_list_plot.append(var)
-        
         for obj in plot_vars["jagged_vars"].keys():
             for var in plot_vars["jagged_vars"][obj]:
                 for i in range(multiplicities[obj]):
                     var_list_plot.append(f"{obj}_{var}_{i}")
 
         print(f"Plotting variables: {var_list_plot}")
-
     
         self.read_vars = read_vars
         self.train_vars = train_vars
         self.multiplicities = multiplicities
+        # Feature vars are all of the features in the data (train or not)
         self.feature_vars = var_list
+        self.feature_vars_train = var_list_train
         self.plot_vars = var_list_plot
 
         #print(f"Reading variables: {read_vars}")
@@ -135,9 +162,6 @@ class Preprocessor():
                     y = y_i
                     w = w_i
                 else:
-                    #X = torch.cat((X, X_i), dim=0)
-                    #y = torch.cat((y, y_i), dim=0)
-                    #w = torch.cat((w, w_i), dim=0)
                     X = pd.concat([X, X_i])
                     y = pd.concat([y, y_i])
                     w = pd.concat([w, w_i])
@@ -164,10 +188,18 @@ class Preprocessor():
             # Count total events
             total_events = len(events)
 
-            # Filter out events
-            events = events[events["dimuon_trigger"] == 1]
+            ############### Helper functions ####################
+            helper_funcs = self.vars_yaml_content["helper_funcs"]
+            for module_name in helper_funcs.keys():
+                module = importlib.import_module(module_name)
+                for helper_func_name in helper_funcs[module_name]:
+                    helper_func = getattr(module, helper_func_name)
+                    events = helper_func(events)
 
-            # Filter out entries (jagged)
+            # Filter out events
+            #events = events[events["dimuon_trigger"] == 1]
+
+            ######### Jagged and scalar filters ##################
             filter_vars = self.vars_yaml_content["filter_vars"]
             if filter_vars["scalar_filter"] is not None:
                 for scalar_filter in filter_vars["scalar_filter"]:
@@ -184,21 +216,6 @@ class Preprocessor():
                 # Recount multiplicities after filtering
                 for collection in collections_filtered:
                     events[f"n{collection}"] = ak.num(events[collection])
-
-            """
-            mask_jagged = events["muonSV"]["charge"] == 0
-            events["muonSV"] = events["muonSV"][mask_jagged]   
-            mask_jagged = events["SV"]["charge"] == 0
-            events["SV"] = events["SV"][mask_jagged]
-            mask_jagged = events["fourmuonSV"]["charge"] == 0
-            events["fourmuonSV"] = events["fourmuonSV"][mask_jagged]
-
-
-            # Count after jagged filtering 
-            events["nmuonSV"] = ak.num(events["muonSV"])
-            events["nSV"] = ak.num(events["SV"])
-            events["nfourmuonSV"] = ak.num(events["fourmuonSV"])"
-            """
 
             # Count passed events
             passed_events = len(events)
@@ -217,7 +234,10 @@ class Preprocessor():
             for i, scalar_var in enumerate(self.scalar_vars):
                 events_flat[:, i] = events[scalar_var]
 
-            var_index = len(self.scalar_vars)
+            for i, scalar_var in enumerate(self.scalar_vars_aux): 
+                events_flat[:, len(self.scalar_vars) + i] = events[scalar_var]
+            var_index = len(self.scalar_vars) + len(self.scalar_vars_aux)
+
             for obj in self.jagged_vars.keys():
                 for var in self.jagged_vars[obj]:
                     for i in range(self.multiplicities[obj]):
@@ -225,27 +245,15 @@ class Preprocessor():
                         events_flat[mask, var_index] = (events[mask])[obj][var][:, i]
                         var_index += 1
 
-            # Then finally fill with plot variables 
-            events_plot = np.full((len(events), len(self.plot_vars)), -999.0)
-            plot_var_index = 0
-            plot_vars = self.vars_yaml_content["plot_vars"]
-
-            for scalar_var in plot_vars["scalar_vars"]:
-                events_plot[:, plot_var_index] = events[scalar_var]
-                plot_var_index += 1
-            
-            for obj in plot_vars["jagged_vars"].keys():
-                for var in plot_vars["jagged_vars"][obj]:
+            for obj in self.vars_yaml_content["jagged_vars_aux"].keys():
+                for var in self.vars_yaml_content["jagged_vars_aux"][obj]:
                     for i in range(self.multiplicities[obj]):
                         mask = ak.num(events[obj]) > i
-                        events_plot[mask, plot_var_index] = (events[mask])[obj][var][:, i]
-                        plot_var_index += 1
-
-            # Concatenate columnwise
-            events_flat = np.concatenate((events_flat, events_plot), axis=1)
+                        events_flat[mask, var_index] = (events[mask])[obj][var][:, i]
+                        var_index += 1
 
             # Save as pandas dataframe
-            X_df = pd.DataFrame(events_flat, columns=self.feature_vars+self.plot_vars)
+            X_df=pd.DataFrame(events_flat, columns=self.feature_vars)
             y_df = pd.DataFrame({"label": self.label*np.ones((X_df.shape[0],))})
             if self.weight_var is not None:
                 w_df = pd.DataFrame({self.weight_var: events[self.weight_var]})
@@ -258,22 +266,6 @@ class Preprocessor():
             # Save cutflow efficiencies
             data_dict["total_events"] = total_events
             data_dict["passed_events"] = passed_events
-
-
-            #X = torch.tensor(events_flat, dtype=torch.float32)
-            #y = torch.full((X.shape[0],), self.label, dtype=torch.float32)
-            #if self.weight_var is not None:
-            #    w = torch.tensor(events[self.weight_var], dtype=torch.float32)
-            #else:
-            #    w = torch.ones((X.shape[0],), dtype=torch.float32)
-
-            #data_dict["X"] = X
-            #data_dict["y"] = y
-            #data_dict["w"] = w
-
-            # Save the data
-            #with open(output_path, "wb") as f:
-            #    pickle.dump(data_dict, f)
 
             # Replace the file name with a batch number: file_0.pkl -> file_0_0.pkl
             output_path_batch = output_path.replace(".pkl", f"_{i_batch}.pkl")

@@ -1,0 +1,48 @@
+scalar_vars: ["L1_DoubleMu_15_7", "L1_DoubleMu4p5er2p0_SQ_OS_Mass_Min7", "L1_DoubleMu4p5_SQ_OS_dR_Max1p2"]
+scalar_vars_aux: ["nMuon", "nSV", "nSVOverlap"]
+scalar_vars_train: ["nMuon", "nSV", "nSVOverlap"]
+
+jagged_vars:
+  Muon: ["pt", "eta", "phi", "phiCorr", "ch", "bestAssocSVIdx", "bestAssocSVOverlapIdx", "isGlobal", "isTracker", "isStandAlone", "chi2Ndof", "dxy", "dxye", "dz", "dze", "dxysig", "dzsig", "ecalIso", "hcalIso", "trackIso", "PFIsoChg0p3", "PFIsoAll0p3", "mindrPF0p3", "nhitsbeforesv", "pixLayers", "trkLayers"]
+  SV: ["index", "ndof", "x", "y", "z", "xe", "ye", "ze", "chi2", "prob", "chi2Ndof", "lxy", "l3d", "selected", "onModuleWithinUnc"] 
+  SVOverlap: ["x", "y", "z", "lxy", "l3d"] 
+jagged_vars_aux:
+  muonSV: []
+  SV: ["mass"]
+  fourmuonSV: []
+jagged_vars_train:
+  Muon: ["pt", "eta", "phi", "ch", "bestAssocSVIdx", "bestAssocSVOverlapIdx", "isGlobal", "isTracker", "isStandAlone", "chi2Ndof", "dxy", "dxye", "dz", "dze", "dxysig", "dzsig", "ecalIso", "hcalIso", "trackIso", "PFIsoChg0p3", "PFIsoAll0p3", "mindrPF0p3", "nhitsbeforesv", "pixLayers", "trkLayers"]
+  SV: ["ndof", "x", "y", "z", "xe", "ye", "ze", "chi2", "prob", "chi2Ndof", "lxy", "l3d"] 
+  SVOverlap: ["x", "y", "z", "lxy", "l3d"] 
+
+jagged_multiplicity:
+  Muon: 4
+  SV: 4
+  SVOverlap: 4
+
+weight_var: null 
+
+sort_vars:
+  SV:
+    var: "chi2Ndof"
+    ascending: True
+  Muon:
+    var: "pt"
+    ascending: False
+
+helper_funcs: 
+  helper_funcs.scouting: ['add_multiplicty', 'trigger_filter', 'get_sv_mass']
+
+filter_vars:
+  scalar_filter: ["nMuon > 0"]
+  jagged_filter: ["SV.selected == 1", "SV.onModuleWithinUnc == 0", "SV.mass > 0.0"]
+
+
+plot_vars: 
+  scalar_vars: ["nMuon", "nSV"]
+  jagged_vars:
+    Muon: ["pt", "dxy", "dxysig"]
+    SV: ["lxy", "l3d", "chi2Ndof", "mass"]
+    SVOverlap: []
+
+    
